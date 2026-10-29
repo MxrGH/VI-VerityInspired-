@@ -139,7 +139,7 @@ public final class VerityVoiceConversation {
         return message.length() > 140 ? message.substring(0, 140) : message;
     }
 
-    private static byte[] makeWav(byte[] pcm) throws java.io.IOException {
+    private static byte[] makeWav(byte[] pcm) {
         ByteArrayOutputStream out = new ByteArrayOutputStream(pcm.length + 44);
         out.write(new byte[]{'R','I','F','F'});
         writeInt(out, 36 + pcm.length);
