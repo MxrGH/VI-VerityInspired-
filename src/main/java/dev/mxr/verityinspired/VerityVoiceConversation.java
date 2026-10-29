@@ -141,9 +141,9 @@ public final class VerityVoiceConversation {
 
     private static byte[] makeWav(byte[] pcm) {
         ByteArrayOutputStream out = new ByteArrayOutputStream(pcm.length + 44);
-        out.write(new byte[]{'R','I','F','F'});
+        out.writeBytes(new byte[]{'R','I','F','F'});
         writeInt(out, 36 + pcm.length);
-        out.write(new byte[]{'W','A','V','E','f','m','t',' '});
+        out.writeBytes(new byte[]{'W','A','V','E','f','m','t',' '});
         writeInt(out, 16);
         writeShort(out, 1);
         writeShort(out, 1);
@@ -151,9 +151,9 @@ public final class VerityVoiceConversation {
         writeInt(out, 96000);
         writeShort(out, 2);
         writeShort(out, 16);
-        out.write(new byte[]{'d','a','t','a'});
+        out.writeBytes(new byte[]{'d','a','t','a'});
         writeInt(out, pcm.length);
-        out.write(pcm);
+        out.writeBytes(pcm);
         return out.toByteArray();
     }
 
