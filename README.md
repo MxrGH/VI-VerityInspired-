@@ -1,25 +1,27 @@
-# FasterGameplayV2
+# Verity-Inspired Horror — Minecraft 26.2
 
-**Maintainer:** MxrMC
+An unofficial original horror-mod starter project for Minecraft Java 26.2, NeoForge 26.2.0.88, and Java 25. This is **not** the official Verity JE mod and includes no protected code, models, textures, dialogue, or actor voice.
 
-Minecraft Java 26.2 · NeoForge 26.2.0.88 · Java 25.
+## Intended features
+- A mysterious orb-like entity that becomes more unsettling over time
+- Story phases: Welcome → Unease → Interference → Presence
+- Atmospheric events, distant sounds, and persistent world progression
+- Required Simple Voice Chat dependency for intended multiplayer play
+- Configurable AI and TTS provider adapters with API keys kept local
 
-## Current behavior
+## Current status
+This repository has been reset to a **source scaffold**, not a finished, compiled, or tested mod JAR. Entity registration, gameplay, AI/TTS adapters, and Simple Voice Chat audio routing still need implementation and validation against the exact Minecraft 26.2 APIs.
 
-This project currently applies a fixed graphics preset once when entering a world. It does not continuously sample FPS or automatically raise render distance. This is intended to avoid the previous adaptive behavior, which could raise rendering workload unexpectedly.
+## Requirements
+- Java 25
+- Minecraft Java 26.2 with NeoForge 26.2.0.88
+- Simple Voice Chat build compatible with NeoForge / Minecraft 26.2
 
-## Honest status
+Simple Voice Chat: https://modrinth.com/mod/simple-voice-chat  
+Documentation: https://modrepo.de/minecraft/voicechat/wiki
 
-This version is **not equivalent to Sodium, FerriteCore, or ModernFix** and does not contain their engine-level optimizations. It does not yet implement a custom chunk renderer or memory deduplication. Do not expect a guaranteed FPS increase from this helper alone.
-
-## Reusing other projects
-
-- Sodium's repository uses the PolyForm Shield 1.0.0 license; its code cannot simply be copied and rebranded without complying with that license.
-- FerriteCore uses the MIT License; reuse requires retaining its copyright and license notice.
-- ModernFix uses LGPL-3.0; covered code reuse must follow that license, including its applicable source and redistribution requirements.
-
-Any future port must preserve third-party notices and be clearly credited. MxrMC can be listed as maintainer/author of this project, but not as the original author of upstream code.
+## AI and TTS
+Cloud AI and TTS integrations require your own provider API keys and may cost money. Keep keys out of source code and logs. The original series' exact voice is not included; use it only with authorized voice assets or permission.
 
 ## Build
-
-Use Java 25 and the configured Gradle/ModDevGradle project. Output: `build/libs/fastergameplayv2-1.0.0.jar`.
+Once the missing integrations and version-specific API wiring are implemented and validated, use Java 25 and run `gradle build`. The JAR should be generated in `build/libs/`.
