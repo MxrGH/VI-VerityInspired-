@@ -28,8 +28,6 @@ public final class FasterGameplayV2 {
 
     private boolean presetApplied;
     private int tickCounter;
-    private int sampledTicks;
-    private int lastFrameCount;
     private int lowFpsSamples;
     private int highFpsSamples;
     private int currentRenderDistance = 6;
@@ -43,7 +41,6 @@ public final class FasterGameplayV2 {
         if (minecraft == null || minecraft.options == null || minecraft.level == null) {
             // Reset the sampling window while in menus or between worlds.
             tickCounter = 0;
-            sampledTicks = 0;
             lowFpsSamples = 0;
             highFpsSamples = 0;
             return;
@@ -52,13 +49,11 @@ public final class FasterGameplayV2 {
         if (!presetApplied) {
             applyLowEndPreset(minecraft.options);
             presetApplied = true;
-            lastFrameCount = minecraft.getFrameTimeNs() > 0 ? minecraft.getFrameTimeNs() : 0;
             return;
         }
 
         // Sample periodically, not every tick, to keep this mod's overhead tiny.
         tickCounter++;
-        sampledTicks++;
         if (tickCounter < SAMPLE_TICKS) return;
         tickCounter = 0;
 
