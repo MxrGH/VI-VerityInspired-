@@ -7,7 +7,7 @@ modId="${mod_id}"
 version="${mod_version}"
 displayName="${mod_name}"
 authors="M.Emir"
-description='''Client-side performance settings helper for Minecraft 26.2. Does not modify the F3 debug screen. Performance and network latency improvements are not guaranteed.'''
+description='''Lightweight client-side performance helper with a low-cost graphics preset and adaptive render-distance governor. Does not modify the F3 debug screen.'''
 
 [[dependencies.${mod_id}]]
 modId="neoforge"
