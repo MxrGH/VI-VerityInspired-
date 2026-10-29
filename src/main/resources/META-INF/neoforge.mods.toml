@@ -6,8 +6,8 @@ license="MIT"
 modId="${mod_id}"
 version="${mod_version}"
 displayName="${mod_name}"
-authors="M.Emir"
-description='''Lightweight client-side performance helper with a low-cost graphics preset and adaptive render-distance governor. Does not modify the F3 debug screen.'''
+authors="MxrMC"
+description='''Client-side settings helper maintained by MxrMC. Uses a fixed low-cost preset and does not modify the F3 debug screen. Not a replacement for Sodium, FerriteCore, or ModernFix.'''
 
 [[dependencies.${mod_id}]]
 modId="neoforge"
