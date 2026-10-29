@@ -12,7 +12,7 @@ description='''Client-side performance settings helper for Minecraft 26.2. Does 
 [[dependencies.${mod_id}]]
 modId="neoforge"
 type="required"
-versionRange="[26.2.0.93,)"
+versionRange="[26.2.0.88,)"
 ordering="NONE"
 side="CLIENT"
 
