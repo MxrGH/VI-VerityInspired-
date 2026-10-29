@@ -44,7 +44,7 @@ public final class VerityAI {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 String key = apiKey("ai.api-key");
-                if (key.isBlank()) throw new IOException("AI API key missing. Configure it with /api ai api-key <key>.");
+                if (key.isBlank()) return localTranscribe(wav);
                 String boundary = "----VerityVoiceBoundaryA7B9";
                 String head = "--" + boundary + "\r\nContent-Disposition: form-data; name=\"file\"; filename=\"voice.wav\"\r\nContent-Type: audio/wav\r\n\r\n";
                 String tail = "\r\n--" + boundary + "\r\nContent-Disposition: form-data; name=\"model\"\r\n\r\ngpt-4o-mini-transcribe\r\n--" + boundary + "--\r\n";
@@ -72,7 +72,7 @@ public final class VerityAI {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 String key = apiKey("ai.api-key");
-                if (key.isBlank()) throw new IOException("AI API key missing. Set it with /api ai api-key <key>.");
+                if (key.isBlank()) return localReply(prompt);
                 JsonObject body = new JsonObject();
                 body.addProperty("model", "gpt-4.1-mini");
                 body.addProperty("instructions",
@@ -114,7 +114,7 @@ public final class VerityAI {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 String key = apiKey("tts.api-key");
-                if (key.isBlank()) throw new IOException("TTS API key missing. Set it with /api tts api-key <key>.");
+                if (key.isBlank()) return localSpeak(text);
                 JsonObject body = new JsonObject();
                 body.addProperty("model", "gpt-4o-mini-tts");
                 body.addProperty("voice", "onyx");
@@ -135,6 +135,60 @@ public final class VerityAI {
                 throw new CompletionException(exception);
             }
         });
+    }
+
+
+    private static String localReply(String prompt) {
+        String input = prompt == null ? "" : prompt.toLowerCase(java.util.Locale.ROOT);
+        if (input.contains("hello") || input.contains("hi") || input.contains("hey")) return "You finally decided to speak to me.";
+        if (input.contains("who are you") || input.contains("your name")) return "They call me Verity. Names are the easiest things to steal.";
+        if (input.contains("where") || input.contains("here")) return "Closer than you think. Keep your eyes open.";
+        if (input.contains("what are you doing")) return "Listening. You make more noise than you realize.";
+        if (input.contains("go away") || input.contains("leave me")) return "I could. But then who would watch you?";
+        if (input.contains("help")) return "Help yourself first. I want to see what you do.";
+        if (input.contains("thank")) return "Do not thank me yet.";
+        String[] replies = {"I heard you. I am still deciding what that means.","Interesting. Keep talking. I am learning your patterns.","You sound certain. That is usually when people make mistakes.","I am here. I have been here longer than you think.","Say that again. I want to remember your voice.","There is something behind you. No, do not turn around. I am only testing you.","You ask questions as if every answer will make you safer."};
+        return replies[Math.floorMod(prompt == null ? 0 : prompt.hashCode(), replies.length)];
+    }
+
+    private static String localTranscribe(byte[] wav) throws Exception {
+        if (!System.getProperty("os.name", "").toLowerCase(java.util.Locale.ROOT).contains("win"))
+            throw new IOException("No AI key is set. Offline speech recognition requires Windows built-in speech recognition; configure ai.api-key on other systems.");
+        Path input = Files.createTempFile("verity-input-", ".wav");
+        try {
+            Files.write(input, wav);
+            String path = input.toAbsolutePath().toString().replace("'", "''");
+            String script = "$ErrorActionPreference='Stop'; Add-Type -AssemblyName System.Speech; " +
+                "$r=New-Object System.Speech.Recognition.SpeechRecognitionEngine; " +
+                "$r.LoadGrammar((New-Object System.Speech.Recognition.DictationGrammar)); " +
+                "$r.SetInputToWaveFile('" + path + "'); " +
+                "$result=$r.Recognize([TimeSpan]::FromSeconds(12)); " +
+                "if ($null -ne $result) { [Console]::Out.Write($result.Text) }; $r.Dispose()";
+            Process process = new ProcessBuilder("powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script).redirectErrorStream(true).start();
+            byte[] output = process.getInputStream().readAllBytes();
+            if (!process.waitFor(20, java.util.concurrent.TimeUnit.SECONDS)) { process.destroyForcibly(); throw new IOException("Offline speech recognition timed out."); }
+            if (process.exitValue() != 0) throw new IOException("Windows offline speech recognition unavailable. Configure ai.api-key for online transcription.");
+            return new String(output, java.nio.charset.StandardCharsets.UTF_8).trim();
+        } finally { Files.deleteIfExists(input); }
+    }
+
+    private static byte[] localSpeak(String text) throws Exception {
+        if (!System.getProperty("os.name", "").toLowerCase(java.util.Locale.ROOT).contains("win"))
+            throw new IOException("No TTS key is set. Built-in Verity-style speech is available on Windows; configure tts.api-key on other systems.");
+        Path output = Files.createTempFile("verity-voice-", ".wav");
+        try {
+            String path = output.toAbsolutePath().toString().replace("'", "''");
+            String safeText = (text == null ? "" : text).replace("'", "''");
+            String script = "$ErrorActionPreference='Stop'; Add-Type -AssemblyName System.Speech; " +
+                "$s=New-Object System.Speech.Synthesis.SpeechSynthesizer; $s.Rate=-3; $s.Volume=90; " +
+                "$s.SetOutputToWaveFile('" + path + "'); $s.Speak('" + safeText + "'); $s.Dispose()";
+            Process process = new ProcessBuilder("powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script).redirectErrorStream(true).start();
+            byte[] log = process.getInputStream().readAllBytes();
+            if (!process.waitFor(30, java.util.concurrent.TimeUnit.SECONDS)) { process.destroyForcibly(); throw new IOException("Local Verity speech synthesis timed out."); }
+            if (process.exitValue() != 0 || !Files.exists(output) || Files.size(output) <= 44)
+                throw new IOException("Windows speech synthesis failed: " + new String(log, java.nio.charset.StandardCharsets.UTF_8));
+            return Files.readAllBytes(output);
+        } finally { Files.deleteIfExists(output); }
     }
 
     public static short[] wavToPcm48kMono(byte[] wav) throws Exception {
