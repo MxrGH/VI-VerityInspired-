@@ -1,19 +1,24 @@
 # FasterGameplayV2
 
-A lightweight client-side performance helper for Minecraft Java 26.2, NeoForge 26.2.0.88, and Java 25.
+**Maintainer:** MxrMC
 
-## Current features
+Minecraft Java 26.2 · NeoForge 26.2.0.88 · Java 25.
 
-- Applies a low-render-cost graphics preset when entering a world.
-- Uses a small periodic FPS sample to adapt render distance: repeated low-FPS samples lower it gradually; sustained high-FPS samples raise it gradually.
-- Keeps the F3/debug overlay untouched.
-- No bundled libraries or extra runtime dependencies beyond NeoForge.
+## Current behavior
 
-## Important scope
+This project currently applies a fixed graphics preset once when entering a world. It does not continuously sample FPS or automatically raise render distance. This is intended to avoid the previous adaptive behavior, which could raise rendering workload unexpectedly.
 
-This is an early optimization layer, not yet a renderer rewrite. It does **not** currently implement Sodium-style chunk meshing/rendering, FerriteCore-style memory deduplication, or ModernFix-style targeted engine patches. Those require deeper changes and careful profiling, and should be added as separate tested modules rather than claimed prematurely.
+## Honest status
 
-FPS gains depend on hardware, world, mods, and drivers. The mod cannot guarantee a specific FPS increase or reduce network ping.
+This version is **not equivalent to Sodium, FerriteCore, or ModernFix** and does not contain their engine-level optimizations. It does not yet implement a custom chunk renderer or memory deduplication. Do not expect a guaranteed FPS increase from this helper alone.
+
+## Reusing other projects
+
+- Sodium's repository uses the PolyForm Shield 1.0.0 license; its code cannot simply be copied and rebranded without complying with that license.
+- FerriteCore uses the MIT License; reuse requires retaining its copyright and license notice.
+- ModernFix uses LGPL-3.0; covered code reuse must follow that license, including its applicable source and redistribution requirements.
+
+Any future port must preserve third-party notices and be clearly credited. MxrMC can be listed as maintainer/author of this project, but not as the original author of upstream code.
 
 ## Build
 
