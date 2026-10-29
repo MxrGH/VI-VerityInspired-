@@ -10,27 +10,16 @@ import java.lang.reflect.Method;
 import java.util.Locale;
 
 /**
- * Lightweight client-side performance governor.
+ * MxrMC's small settings helper.
  *
- * This first optimization layer reduces rendering load and adapts chunk
- * distance when the measured frame rate remains low. It does not modify F3.
- * It is not a replacement for a renderer rewrite such as Sodium.
+ * No continuous FPS polling or automatic render-distance changes. Real
+ * rendering and memory optimizations must be implemented and profiled as
+ * separate, targeted patches.
  */
 @Mod(FasterGameplayV2.MOD_ID)
 public final class FasterGameplayV2 {
     public static final String MOD_ID = "fastergameplayv2";
-
-    private static final int SAMPLE_TICKS = 100;
-    private static final int LOW_FPS_THRESHOLD = 24;
-    private static final int HIGH_FPS_THRESHOLD = 55;
-    private static final int MIN_RENDER_DISTANCE = 3;
-    private static final int MAX_RENDER_DISTANCE = 8;
-
-    private boolean presetApplied;
-    private int tickCounter;
-    private int lowFpsSamples;
-    private int highFpsSamples;
-    private int currentRenderDistance = 6;
+    private boolean applied;
 
     public FasterGameplayV2() {
         NeoForge.EVENT_BUS.addListener(this::onClientTick);
@@ -38,109 +27,70 @@ public final class FasterGameplayV2 {
 
     private void onClientTick(ClientTickEvent.Post event) {
         Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft == null || minecraft.options == null || minecraft.level == null) {
-            // Reset the sampling window while in menus or between worlds.
-            tickCounter = 0;
-            lowFpsSamples = 0;
-            highFpsSamples = 0;
+        if (minecraft == null || minecraft.options == null) return;
+
+        if (minecraft.level == null) {
+            applied = false;
             return;
         }
+        if (applied) return;
 
-        if (!presetApplied) {
-            applyLowEndPreset(minecraft.options);
-            presetApplied = true;
-            return;
-        }
-
-        // Sample periodically, not every tick, to keep this mod's overhead tiny.
-        tickCounter++;
-        if (tickCounter < SAMPLE_TICKS) return;
-        tickCounter = 0;
-
-        // Minecraft's FPS counter is available via the window on supported clients.
-        int fps = minecraft.getFps();
-        if (fps > 0 && fps < LOW_FPS_THRESHOLD) {
-            lowFpsSamples++;
-            highFpsSamples = 0;
-        } else if (fps >= HIGH_FPS_THRESHOLD) {
-            highFpsSamples++;
-            lowFpsSamples = 0;
-        } else {
-            lowFpsSamples = Math.max(0, lowFpsSamples - 1);
-            highFpsSamples = Math.max(0, highFpsSamples - 1);
-        }
-
-        // Require repeated bad/good samples to avoid flickering between values.
-        if (lowFpsSamples >= 2 && currentRenderDistance > MIN_RENDER_DISTANCE) {
-            currentRenderDistance--;
-            setNumericOption(minecraft.options, "renderDistance", currentRenderDistance);
-            lowFpsSamples = 0;
-        } else if (highFpsSamples >= 4 && currentRenderDistance < MAX_RENDER_DISTANCE) {
-            currentRenderDistance++;
-            setNumericOption(minecraft.options, "renderDistance", currentRenderDistance);
-            highFpsSamples = 0;
-        }
+        // Conservative, fixed preset: never automatically raises render distance.
+        setOption(minecraft.options, "renderDistance", 6);
+        setOption(minecraft.options, "simulationDistance", 4);
+        setOption(minecraft.options, "entityDistanceScaling", 0.50);
+        setOption(minecraft.options, "mipmapLevels", 0);
+        setOption(minecraft.options, "biomeBlendRadius", 0);
+        setOption(minecraft.options, "maxFps", 120);
+        setEnumOption(minecraft.options, "graphicsMode", "FAST");
+        setEnumOption(minecraft.options, "cloudStatus", "OFF");
+        setEnumOption(minecraft.options, "particles", "MINIMAL");
+        setOption(minecraft.options, "ambientOcclusion", false);
+        setOption(minecraft.options, "entityShadows", false);
+        setOption(minecraft.options, "enableVsync", false);
+        applied = true;
     }
 
-    private static void applyLowEndPreset(Object options) {
-        setNumericOption(options, "renderDistance", 6);
-        setNumericOption(options, "simulationDistance", 4);
-        setNumericOption(options, "entityDistanceScaling", 0.50);
-        setNumericOption(options, "mipmapLevels", 0);
-        setNumericOption(options, "biomeBlendRadius", 0);
-        setNumericOption(options, "maxFps", 120);
-
-        setEnumOption(options, "graphicsMode", "FAST");
-        setEnumOption(options, "cloudStatus", "OFF");
-        setEnumOption(options, "particles", "MINIMAL");
-
-        setBooleanOption(options, "ambientOcclusion", false);
-        setBooleanOption(options, "entityShadows", false);
-        setBooleanOption(options, "enableVsync", false);
-    }
-
-    private static void setNumericOption(Object owner, String fieldName, Number target) {
+    private static void setOption(Object owner, String name, Object value) {
         try {
-            Object option = findField(owner, fieldName);
+            Object option = findField(owner, name);
             if (option == null) return;
-            Method set = findOneArgMethod(option.getClass(), "set");
-            if (set == null) return;
-            Object value = convertNumber(target, set.getParameterTypes()[0]);
-            if (value != null) set.invoke(option, value);
+            Method setter = findSetter(option.getClass());
+            if (setter == null) return;
+            Class<?> parameter = setter.getParameterTypes()[0];
+            Object converted = value;
+            if (value instanceof Number n) {
+                if (parameter == int.class || parameter == Integer.class) converted = n.intValue();
+                else if (parameter == double.class || parameter == Double.class) converted = n.doubleValue();
+                else if (parameter == float.class || parameter == Float.class) converted = n.floatValue();
+                else if (parameter == long.class || parameter == Long.class) converted = n.longValue();
+                else return;
+            } else if (value instanceof Boolean
+                    && parameter != boolean.class && parameter != Boolean.class) {
+                return;
+            } else if (!(value instanceof Boolean)) {
+                return;
+            }
+            setter.invoke(option, converted);
         } catch (ReflectiveOperationException | RuntimeException ignored) {
-            // Skip options whose names or types differ in this game version.
+            // Unsupported options are skipped safely.
         }
     }
 
-    private static void setBooleanOption(Object owner, String fieldName, boolean target) {
+    private static void setEnumOption(Object owner, String name, String target) {
         try {
-            Object option = findField(owner, fieldName);
+            Object option = findField(owner, name);
             if (option == null) return;
-            Method set = findOneArgMethod(option.getClass(), "set");
-            if (set == null || (set.getParameterTypes()[0] != boolean.class
-                    && set.getParameterTypes()[0] != Boolean.class)) return;
-            set.invoke(option, target);
-        } catch (ReflectiveOperationException | RuntimeException ignored) {
-            // Safely skip unavailable options.
-        }
-    }
-
-    private static void setEnumOption(Object owner, String fieldName, String targetName) {
-        try {
-            Object option = findField(owner, fieldName);
-            if (option == null) return;
-            Method set = findOneArgMethod(option.getClass(), "set");
-            if (set == null) return;
-            Class<?> type = set.getParameterTypes()[0];
-            if (!type.isEnum()) return;
-            for (Object constant : type.getEnumConstants()) {
-                if (((Enum<?>) constant).name().equalsIgnoreCase(targetName)) {
-                    set.invoke(option, constant);
+            Method setter = findSetter(option.getClass());
+            if (setter == null || !setter.getParameterTypes()[0].isEnum()) return;
+            for (Object constant : setter.getParameterTypes()[0].getEnumConstants()) {
+                if (((Enum<?>) constant).name().equalsIgnoreCase(target)) {
+                    setter.invoke(option, constant);
                     return;
                 }
             }
         } catch (ReflectiveOperationException | RuntimeException ignored) {
-            // Safely skip unavailable options.
+            // Unsupported options are skipped safely.
         }
     }
 
@@ -156,24 +106,10 @@ public final class FasterGameplayV2 {
         return null;
     }
 
-    private static Method findOneArgMethod(Class<?> type, String name) {
+    private static Method findSetter(Class<?> type) {
         for (Method method : type.getMethods()) {
-            if (method.getName().equals(name) && method.getParameterCount() == 1) return method;
+            if (method.getName().equals("set") && method.getParameterCount() == 1) return method;
         }
-        for (Method method : type.getDeclaredMethods()) {
-            if (method.getName().equals(name) && method.getParameterCount() == 1) {
-                method.setAccessible(true);
-                return method;
-            }
-        }
-        return null;
-    }
-
-    private static Object convertNumber(Number number, Class<?> type) {
-        if (type == int.class || type == Integer.class) return number.intValue();
-        if (type == double.class || type == Double.class) return number.doubleValue();
-        if (type == float.class || type == Float.class) return number.floatValue();
-        if (type == long.class || type == Long.class) return number.longValue();
         return null;
     }
 }
