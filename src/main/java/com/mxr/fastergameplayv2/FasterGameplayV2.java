@@ -10,28 +10,84 @@ import java.lang.reflect.Method;
 import java.util.Locale;
 
 /**
- * Client-side performance preset for lower-end hardware.
- * It never reads or writes the F3/debug overlay state.
+ * Lightweight client-side performance governor.
+ *
+ * This first optimization layer reduces rendering load and adapts chunk
+ * distance when the measured frame rate remains low. It does not modify F3.
+ * It is not a replacement for a renderer rewrite such as Sodium.
  */
 @Mod(FasterGameplayV2.MOD_ID)
 public final class FasterGameplayV2 {
     public static final String MOD_ID = "fastergameplayv2";
-    private boolean applied;
+
+    private static final int SAMPLE_TICKS = 100;
+    private static final int LOW_FPS_THRESHOLD = 24;
+    private static final int HIGH_FPS_THRESHOLD = 55;
+    private static final int MIN_RENDER_DISTANCE = 3;
+    private static final int MAX_RENDER_DISTANCE = 8;
+
+    private boolean presetApplied;
+    private int tickCounter;
+    private int sampledTicks;
+    private int lastFrameCount;
+    private int lowFpsSamples;
+    private int highFpsSamples;
+    private int currentRenderDistance = 6;
 
     public FasterGameplayV2() {
         NeoForge.EVENT_BUS.addListener(this::onClientTick);
     }
 
     private void onClientTick(ClientTickEvent.Post event) {
-        if (applied) return;
         Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft == null || minecraft.options == null || minecraft.level == null) return;
-        applied = true;
+        if (minecraft == null || minecraft.options == null || minecraft.level == null) {
+            // Reset the sampling window while in menus or between worlds.
+            tickCounter = 0;
+            sampledTicks = 0;
+            lowFpsSamples = 0;
+            highFpsSamples = 0;
+            return;
+        }
 
-        Object options = minecraft.options;
+        if (!presetApplied) {
+            applyLowEndPreset(minecraft.options);
+            presetApplied = true;
+            lastFrameCount = minecraft.getFrameTimeNs() > 0 ? minecraft.getFrameTimeNs() : 0;
+            return;
+        }
 
-        // Biggest practical reductions for integrated graphics: fewer chunks,
-        // fewer ticking chunks, and less entity/rendering work.
+        // Sample periodically, not every tick, to keep this mod's overhead tiny.
+        tickCounter++;
+        sampledTicks++;
+        if (tickCounter < SAMPLE_TICKS) return;
+        tickCounter = 0;
+
+        // Minecraft's FPS counter is available via the window on supported clients.
+        int fps = minecraft.getFps();
+        if (fps > 0 && fps < LOW_FPS_THRESHOLD) {
+            lowFpsSamples++;
+            highFpsSamples = 0;
+        } else if (fps >= HIGH_FPS_THRESHOLD) {
+            highFpsSamples++;
+            lowFpsSamples = 0;
+        } else {
+            lowFpsSamples = Math.max(0, lowFpsSamples - 1);
+            highFpsSamples = Math.max(0, highFpsSamples - 1);
+        }
+
+        // Require repeated bad/good samples to avoid flickering between values.
+        if (lowFpsSamples >= 2 && currentRenderDistance > MIN_RENDER_DISTANCE) {
+            currentRenderDistance--;
+            setNumericOption(minecraft.options, "renderDistance", currentRenderDistance);
+            lowFpsSamples = 0;
+        } else if (highFpsSamples >= 4 && currentRenderDistance < MAX_RENDER_DISTANCE) {
+            currentRenderDistance++;
+            setNumericOption(minecraft.options, "renderDistance", currentRenderDistance);
+            highFpsSamples = 0;
+        }
+    }
+
+    private static void applyLowEndPreset(Object options) {
         setNumericOption(options, "renderDistance", 6);
         setNumericOption(options, "simulationDistance", 4);
         setNumericOption(options, "entityDistanceScaling", 0.50);
@@ -66,8 +122,8 @@ public final class FasterGameplayV2 {
             Object option = findField(owner, fieldName);
             if (option == null) return;
             Method set = findOneArgMethod(option.getClass(), "set");
-            if (set == null || set.getParameterTypes()[0] != boolean.class
-                    && set.getParameterTypes()[0] != Boolean.class) return;
+            if (set == null || (set.getParameterTypes()[0] != boolean.class
+                    && set.getParameterTypes()[0] != Boolean.class)) return;
             set.invoke(option, target);
         } catch (ReflectiveOperationException | RuntimeException ignored) {
             // Safely skip unavailable options.
