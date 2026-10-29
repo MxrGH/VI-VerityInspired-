@@ -1,24 +1,31 @@
 modLoader="javafml"
-loaderVersion="[1,)"
-license="MIT"
+loaderVersion="[4,)"
+license="${mod_license}"
 
 [[mods]]
 modId="${mod_id}"
 version="${mod_version}"
 displayName="${mod_name}"
-authors="MxrMC"
-description='''Client-side settings helper maintained by MxrMC. Uses a fixed low-cost preset and does not modify the F3 debug screen. Not a replacement for Sodium, FerriteCore, or ModernFix.'''
+description='''An unofficial original-inspired horror experience.'''
+authors="Mxr"
 
-[[dependencies.${mod_id}]]
+[[dependencies.verityinspired]]
 modId="neoforge"
 type="required"
-versionRange="[26.2.0.88,)"
+versionRange="[26.2,)"
 ordering="NONE"
-side="CLIENT"
+side="BOTH"
 
-[[dependencies.${mod_id}]]
+[[dependencies.verityinspired]]
 modId="minecraft"
 type="required"
 versionRange="[26.2,26.3)"
 ordering="NONE"
-side="CLIENT"
+side="BOTH"
+
+[[dependencies.verityinspired]]
+modId="voicechat"
+type="required"
+versionRange="[2.6.0,)"
+ordering="AFTER"
+side="BOTH"
