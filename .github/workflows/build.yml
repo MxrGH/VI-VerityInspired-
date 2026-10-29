@@ -1,4 +1,4 @@
-name: Build mod scaffold
+name: Build Verity-Inspired Horror
 
 on:
   push:
@@ -22,8 +22,10 @@ jobs:
           java-version: '25'
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.1.0'
       - name: Build mod JAR
-        run: gradle build --no-daemon
+        run: gradle build --no-daemon --stacktrace
       - name: Upload JAR
         uses: actions/upload-artifact@v4
         with:
