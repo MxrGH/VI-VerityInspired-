@@ -40,6 +40,34 @@ public final class VerityAI {
         return properties.getProperty(name, "").trim();
     }
 
+    public static CompletableFuture<String> transcribe(byte[] wav) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                String key = apiKey("ai.api-key");
+                if (key.isBlank()) throw new IOException("AI API key missing. Configure it with /api ai api-key <key>.");
+                String boundary = "----VerityVoiceBoundaryA7B9";
+                String head = "--" + boundary + "\r\nContent-Disposition: form-data; name=\"file\"; filename=\"voice.wav\"\r\nContent-Type: audio/wav\r\n\r\n";
+                String tail = "\r\n--" + boundary + "\r\nContent-Disposition: form-data; name=\"model\"\r\n\r\ngpt-4o-mini-transcribe\r\n--" + boundary + "--\r\n";
+                ByteArrayOutputStream body = new ByteArrayOutputStream();
+                body.write(head.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                body.write(wav);
+                body.write(tail.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                HttpRequest request = HttpRequest.newBuilder(URI.create("https://api.openai.com/v1/audio/transcriptions"))
+                    .timeout(Duration.ofSeconds(60))
+                    .header("Authorization", "Bearer " + key)
+                    .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                    .POST(HttpRequest.BodyPublishers.ofByteArray(body.toByteArray())).build();
+                HttpResponse<String> response = HTTP.send(request, HttpResponse.BodyHandlers.ofString());
+                if (response.statusCode() < 200 || response.statusCode() >= 300)
+                    throw new IOException("Speech transcription returned HTTP " + response.statusCode() + ".");
+                JsonObject result = JsonParser.parseString(response.body()).getAsJsonObject();
+                return result.has("text") ? result.get("text").getAsString().trim() : "";
+            } catch (Exception exception) {
+                throw new CompletionException(exception);
+            }
+        });
+    }
+
     public static CompletableFuture<String> ask(String prompt) {
         return CompletableFuture.supplyAsync(() -> {
             try {
