@@ -1,21 +1,29 @@
 # Verity-Inspired Horror — Minecraft Java 26.2
 
-A NeoForge horror mod project targeting Minecraft 26.2 / NeoForge 26.2.0.88 / Java 25.
+Target: Minecraft Java 26.2, NeoForge 26.2.0.88, Java 25.
 
-## Implemented in source
-- Registered hostile entity: `verityinspired:verity`
-- Summon with `/summon verityinspired:verity` (requires normal Minecraft command permission)
-- 70 health, 8 attack damage, high knockback resistance, long follow range
-- Hostile player targeting, melee pursuit, wandering, and looking behavior
-- Stalking sound cues and occasional short-range teleporting when tracking a player
-- A vanilla humanoid silhouette/texture so no external assets are required
+## Gameplay
+- Hostile entity: `verityinspired:verity`
+- Summon it with `/summon verityinspired:verity`.
+- Verity has 70 health, strong melee damage, a long detection range, stalking sound cues, and occasional teleporting while tracking a player.
+- It uses a vanilla humanoid texture as a placeholder visual.
 
-## API keys and unfinished integrations
-The existing `/api tts api-key <key>` and `/api ai api-key <key>` commands only store keys locally. **They do not call an AI or TTS provider yet.** Simple Voice Chat is listed as a dependency in mod metadata, but voice-chat audio routing and actual generated speech still need implementation.
+## AI dialogue and voice
+The mod includes OpenAI-compatible service calls against OpenAI's API:
+- `/verity ai <prompt>` asks the AI for a Verity-style response in chat.
+- `/verity speak <text>` generates speech and attempts to play it as positional audio through Simple Voice Chat.
+- `/verity ask <prompt>` asks the AI, then generates and plays the answer through Simple Voice Chat.
 
-Keep API keys private and only configure them on a server you control. Cloud AI/TTS usage may cost money.
+Configure keys as an operator:
+- `/api ai api-key <your-api-key>`
+- `/api tts api-key <your-api-key>`
 
-## Build
-Use JDK 25 and run `gradle build --no-daemon`. The compiled JAR should appear in `build/libs/`. The GitHub Actions workflow builds on pushes to `main` and uploads an artifact named `verityinspired-jar` when successful.
+Keys are written to `config/verityinspired-secrets.properties`, not echoed in chat. Keep this file private. Do not enter keys on servers you do not control. API usage may incur charges. These commands target OpenAI's Responses and audio speech endpoints; other providers are not configurable yet.
 
-This source change has not yet been confirmed by a successful build; check the Actions run before installing the JAR.
+## Required dependency
+Install a Simple Voice Chat version compatible with the exact Minecraft/NeoForge version and API 2.6.0 or newer. The server and listeners who should hear generated voice need a working Simple Voice Chat setup. Its server UDP port must be configured as described in the official documentation: https://dev.modrepo.de/minecraft/voicechat
+
+## Build and verification
+Use JDK 25 and run `gradle build --no-daemon`. The JAR should be produced in `build/libs/`. GitHub Actions is configured to upload the `verityinspired-jar` artifact on a successful build.
+
+**Important:** The new AI/TTS/voice-chat code has been committed, but its first build and in-game test still need confirmation. If the build fails, inspect the GitHub Actions logs before installing the mod.
