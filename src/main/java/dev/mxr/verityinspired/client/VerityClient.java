@@ -2,27 +2,23 @@ package dev.mxr.verityinspired.client;
 
 import dev.mxr.verityinspired.VerityEntities;
 import dev.mxr.verityinspired.VerityEntity;
-import dev.mxr.verityinspired.VerityInspired;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.MobRenderer;
+import net.minecraft.client.renderer.entity.state.HumanoidRenderState;
+import net.minecraft.client.renderer.entity.state.ZombieRenderState;
 import net.minecraft.resources.Identifier;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 
-@EventBusSubscriber(modid = VerityInspired.MOD_ID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
 public final class VerityClient {
     private VerityClient() {}
 
-    @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(VerityEntities.VERITY.get(), VerityRenderer::new);
     }
 
-    private static final class VerityRenderer extends MobRenderer<VerityEntity, HumanoidModel<VerityEntity>> {
+    private static final class VerityRenderer extends MobRenderer<VerityEntity, ZombieRenderState, HumanoidModel<HumanoidRenderState>> {
         private static final Identifier TEXTURE =
             Identifier.fromNamespaceAndPath("minecraft", "textures/entity/zombie/zombie.png");
 
@@ -31,7 +27,17 @@ public final class VerityClient {
         }
 
         @Override
-        public Identifier getTextureLocation(VerityEntity entity) {
+        public ZombieRenderState createRenderState() {
+            return new ZombieRenderState();
+        }
+
+        @Override
+        public void extractRenderState(VerityEntity entity, ZombieRenderState state, float partialTick) {
+            super.extractRenderState(entity, state, partialTick);
+        }
+
+        @Override
+        public Identifier getTextureLocation(ZombieRenderState state) {
             return TEXTURE;
         }
     }
