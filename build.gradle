@@ -22,6 +22,11 @@ neoForge {
 repositories {
     mavenCentral()
     maven { url = 'https://maven.neoforged.net/releases' }
+    maven { url = 'https://maven.maxhenkel.de/repository/public' }
+}
+
+dependencies {
+    implementation "de.maxhenkel.voicechat:voicechat-api:2.6.25"
 }
 
 // Expand metadata placeholders from gradle.properties.
