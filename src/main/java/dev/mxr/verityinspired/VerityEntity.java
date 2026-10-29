@@ -1,6 +1,7 @@
 package dev.mxr.verityinspired;
 
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.EntityType;
@@ -11,6 +12,7 @@ import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
+import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -19,7 +21,7 @@ public final class VerityEntity extends Monster {
     private int stareTicks;
     private int teleportCooldown = 100;
 
-    public VerityEntity(EntityType<? extends Monster> type, Level level) {
+    public VerityEntity(EntityType<? extends VerityEntity> type, Level level) {
         super(type, level);
         this.xpReward = 15;
     }
@@ -39,7 +41,7 @@ public final class VerityEntity extends Monster {
         this.goalSelector.addGoal(2, new WaterAvoidingRandomStrollGoal(this, 0.85D));
         this.goalSelector.addGoal(3, new LookAtPlayerGoal(this, Player.class, 24.0F));
         this.goalSelector.addGoal(4, new RandomLookAroundGoal(this));
-        this.targetSelector.addGoal(1, new net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal<>(this, Player.class, true));
+        this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Player.class, true));
     }
 
     @Override
@@ -55,14 +57,17 @@ public final class VerityEntity extends Monster {
             if (distance < 14.0D * 14.0D) {
                 stareTicks++;
                 if (stareTicks % 80 == 0) {
-                    serverLevel.playSound(null, this.blockPosition(), SoundEvents.ENDERMAN_STARE, SoundSource.HOSTILE, 0.9F, 0.65F);
+                    serverLevel.playSound(null, this.blockPosition(), SoundEvents.ENDERMAN_STARE,
+                        SoundSource.HOSTILE, 0.9F, 0.65F);
                 }
-                if (distance > 8.0D * 8.0D && distance < 34.0D * 34.0D && teleportCooldown == 0 && this.random.nextInt(4) == 0) {
+                if (distance > 8.0D * 8.0D && distance < 34.0D * 34.0D
+                    && teleportCooldown == 0 && this.random.nextInt(4) == 0) {
                     double angle = this.random.nextDouble() * Math.PI * 2.0D;
                     double x = player.getX() + Math.cos(angle) * (3.0D + this.random.nextDouble() * 3.0D);
                     double z = player.getZ() + Math.sin(angle) * (3.0D + this.random.nextDouble() * 3.0D);
                     if (this.randomTeleport(x, player.getY(), z, true)) {
-                        serverLevel.playSound(null, this.blockPosition(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.HOSTILE, 0.9F, 0.7F);
+                        serverLevel.playSound(null, this.blockPosition(), SoundEvents.ENDERMAN_TELEPORT,
+                            SoundSource.HOSTILE, 0.9F, 0.7F);
                         teleportCooldown = 180;
                     }
                 }
@@ -75,22 +80,17 @@ public final class VerityEntity extends Monster {
     }
 
     @Override
-    protected net.minecraft.sounds.SoundEvent getAmbientSound() {
+    protected SoundEvent getAmbientSound() {
         return SoundEvents.ENDERMAN_AMBIENT;
     }
 
     @Override
-    protected net.minecraft.sounds.SoundEvent getHurtSound(net.minecraft.world.damagesource.DamageSource source) {
+    protected SoundEvent getHurtSound(net.minecraft.world.damagesource.DamageSource source) {
         return SoundEvents.ENDERMAN_HURT;
     }
 
     @Override
-    protected net.minecraft.sounds.SoundEvent getDeathSound() {
+    protected SoundEvent getDeathSound() {
         return SoundEvents.ENDERMAN_DEATH;
-    }
-
-    @Override
-    public boolean hurtServer(ServerLevel level, net.minecraft.world.damagesource.DamageSource source, float amount) {
-        return super.hurtServer(level, source, amount);
     }
 }
