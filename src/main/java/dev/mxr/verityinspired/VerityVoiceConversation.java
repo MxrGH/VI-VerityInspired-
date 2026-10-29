@@ -62,6 +62,7 @@ public final class VerityVoiceConversation {
                 }
                 session.lastPacketNanos = System.nanoTime();
                 session.player = player;
+                session.level = level;
             }
         } catch (Exception e) {
             VerityInspired.LOGGER.debug("Could not decode incoming voice packet", e);
@@ -99,11 +100,11 @@ public final class VerityVoiceConversation {
                     return VerityAI.speak(reply).thenApply(audio -> new Reply(reply, audio));
                 })
                 .whenComplete((reply, error) -> {
-                    if (player.getServer() == null) {
+                    if (session.level == null || session.level.getServer() == null) {
                         synchronized (session) { session.processing = false; }
                         return;
                     }
-                    player.getServer().execute(() -> {
+                    session.level.getServer().execute(() -> {
                         try {
                             if (error != null) {
                                 player.sendSystemMessage(Component.literal("[Verity voice] " + safeMessage(error)));
@@ -171,6 +172,7 @@ public final class VerityVoiceConversation {
         volatile long lastPacketNanos;
         volatile boolean processing;
         volatile ServerPlayer player;
+        volatile ServerLevel level;
         void close() {
             if (decoder != null && !decoder.isClosed()) decoder.close();
             synchronized (this) { audio.reset(); }
