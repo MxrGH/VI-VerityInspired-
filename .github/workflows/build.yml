@@ -10,23 +10,66 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: verity-build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
+    name: Compile and verify mod
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out source
+        uses: actions/checkout@v4
+
       - name: Set up Java 25
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '25'
+          cache: gradle
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.1.0'
-      - name: Build mod JAR
-        run: gradle build --no-daemon --stacktrace
-      - name: Upload JAR
+
+      - name: Show build environment
+        run: |
+          java -version
+          gradle --version
+          git log -1 --oneline
+
+      - name: Validate project files
+        run: |
+          test -f settings.gradle || test -f settings.gradle.kts
+          test -f build.gradle || test -f build.gradle.kts
+          test -d src/main/java
+          echo "Project structure looks present."
+
+      - name: Clean and build mod JAR
+        run: gradle clean build --no-daemon --stacktrace
+
+      - name: Verify generated JAR
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Generated files:"
+          find build/libs -maxdepth 1 -type f -name '*.jar' -printf '%f (%s bytes)\n'
+          JAR="$(find build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*-sources.jar' ! -name '*-javadoc.jar' -print -quit)"
+          if [[ -z "$JAR" ]]; then
+            echo "::error::No mod JAR was produced in build/libs."
+            exit 1
+          fi
+          if [[ ! -s "$JAR" ]]; then
+            echo "::error::The generated JAR is empty."
+            exit 1
+          fi
+          echo "Verified JAR: $JAR"
+          jar tf "$JAR" | head -n 40
+
+      - name: Upload mod JAR
         uses: actions/upload-artifact@v4
         with:
           name: verityinspired-jar
