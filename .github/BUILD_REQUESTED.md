@@ -1,0 +1,1 @@
+Build trigger for the Verity-Inspired mod. The GitHub Actions workflow should build with Java 25 and upload the verityinspired-jar artifact.
