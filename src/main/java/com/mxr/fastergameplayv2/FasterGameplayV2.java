@@ -10,8 +10,8 @@ import java.lang.reflect.Method;
 import java.util.Locale;
 
 /**
- * Conservative client-side options tuner.
- * It intentionally never reads or writes debug/F3 state.
+ * Client-side performance preset for lower-end hardware.
+ * It never reads or writes the F3/debug overlay state.
  */
 @Mod(FasterGameplayV2.MOD_ID)
 public final class FasterGameplayV2 {
@@ -27,16 +27,25 @@ public final class FasterGameplayV2 {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft == null || minecraft.options == null || minecraft.level == null) return;
         applied = true;
+
         Object options = minecraft.options;
 
-        setNumericOption(options, "renderDistance", 8);
-        setNumericOption(options, "simulationDistance", 5);
-        setNumericOption(options, "entityDistanceScaling", 0.75);
-        setNumericOption(options, "mipmapLevels", 2);
+        // Biggest practical reductions for integrated graphics: fewer chunks,
+        // fewer ticking chunks, and less entity/rendering work.
+        setNumericOption(options, "renderDistance", 6);
+        setNumericOption(options, "simulationDistance", 4);
+        setNumericOption(options, "entityDistanceScaling", 0.50);
+        setNumericOption(options, "mipmapLevels", 0);
         setNumericOption(options, "biomeBlendRadius", 0);
+        setNumericOption(options, "maxFps", 120);
+
         setEnumOption(options, "graphicsMode", "FAST");
         setEnumOption(options, "cloudStatus", "OFF");
         setEnumOption(options, "particles", "MINIMAL");
+
+        setBooleanOption(options, "ambientOcclusion", false);
+        setBooleanOption(options, "entityShadows", false);
+        setBooleanOption(options, "enableVsync", false);
     }
 
     private static void setNumericOption(Object owner, String fieldName, Number target) {
@@ -49,6 +58,19 @@ public final class FasterGameplayV2 {
             if (value != null) set.invoke(option, value);
         } catch (ReflectiveOperationException | RuntimeException ignored) {
             // Skip options whose names or types differ in this game version.
+        }
+    }
+
+    private static void setBooleanOption(Object owner, String fieldName, boolean target) {
+        try {
+            Object option = findField(owner, fieldName);
+            if (option == null) return;
+            Method set = findOneArgMethod(option.getClass(), "set");
+            if (set == null || set.getParameterTypes()[0] != boolean.class
+                    && set.getParameterTypes()[0] != Boolean.class) return;
+            set.invoke(option, target);
+        } catch (ReflectiveOperationException | RuntimeException ignored) {
+            // Safely skip unavailable options.
         }
     }
 
@@ -67,7 +89,7 @@ public final class FasterGameplayV2 {
                 }
             }
         } catch (ReflectiveOperationException | RuntimeException ignored) {
-            // Safely skip options unavailable in this version.
+            // Safely skip unavailable options.
         }
     }
 
