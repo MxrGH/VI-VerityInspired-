@@ -19,8 +19,21 @@ public final class VerityCommands {
     @SubscribeEvent
     public static void registerCommands(RegisterCommandsEvent event) {
         event.getDispatcher().register(Commands.literal("verity")
-            .requires(Commands.hasPermission(Commands.LEVEL_ADMINS))
-            .then(Commands.literal("ai")
+            .then(Commands.literal("voice")
+                .then(Commands.literal("on").executes(ctx -> {
+                    var player = ctx.getSource().getPlayerOrException();
+                    VerityVoiceConversation.setEnabled(player.getUUID(), true);
+                    player.sendSystemMessage(Component.literal("Voice conversation enabled. While you are within 18 blocks of Verity, your voice audio is sent to the configured AI service for transcription. Use /verity voice off to disable it."));
+                    return 1;
+                }))
+                .then(Commands.literal("off").executes(ctx -> {
+                    var player = ctx.getSource().getPlayerOrException();
+                    VerityVoiceConversation.setEnabled(player.getUUID(), false);
+                    player.sendSystemMessage(Component.literal("Voice conversation disabled."));
+                    return 1;
+                }))
+            )
+            .then(Commands.literal("ai").requires(Commands.hasPermission(Commands.LEVEL_ADMINS))
                 .then(Commands.argument("prompt", StringArgumentType.greedyString())
                     .executes(ctx -> {
                         CommandSourceStack source = ctx.getSource();
@@ -37,12 +50,12 @@ public final class VerityCommands {
                     })
                 )
             )
-            .then(Commands.literal("speak")
+            .then(Commands.literal("speak").requires(Commands.hasPermission(Commands.LEVEL_ADMINS))
                 .then(Commands.argument("text", StringArgumentType.greedyString())
                     .executes(ctx -> speak(ctx.getSource(), StringArgumentType.getString(ctx, "text")))
                 )
             )
-            .then(Commands.literal("ask")
+            .then(Commands.literal("ask").requires(Commands.hasPermission(Commands.LEVEL_ADMINS))
                 .then(Commands.argument("prompt", StringArgumentType.greedyString())
                     .executes(ctx -> {
                         CommandSourceStack source = ctx.getSource();
